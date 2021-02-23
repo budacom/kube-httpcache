@@ -28,6 +28,7 @@ cache:
   backendService: backend-service
   # name of backend service namespace
   # backendServiceNamespace: backend-service-namespace
+  # frontendService: ""
   # Varnish storage backend type (https://varnish-cache.org/docs/trunk/users-guide/storage-backends.html)
   varnishStorage: malloc # default,malloc,umem,file...
   # Varnish storage backend size
@@ -172,10 +173,10 @@ readinessProbe: {}
 
 vclTemplate: |
   vcl 4.0;
-  
+
   import std;
   import directors;
-  
+
   // ".Frontends" is a slice that contains all known Varnish instances
   // (as selected by the service specified by -frontend-service).
   // The backend name needs to be the Pod name, since this value is compared
@@ -188,36 +189,36 @@ vclTemplate: |
       .port = "{{ .Port }}";
   }
   {{- end }}
-  
+
   {{ range .Backends }}
   backend be-{{ .Name }} {
       .host = "{{ .Host }}";
       .port = "{{ .Port }}";
   }
   {{- end }}
-  
+
   sub vcl_init {
       new cluster = directors.hash();
-  
+
       {{ range .Frontends -}}
       cluster.add_backend({{ .Name }}, 1);
       {{ end }}
-  
+
       new lb = directors.round_robin();
-  
+
       {{ range .Backends -}}
       lb.add_backend(be-{{ .Name }});
       {{ end }}
   }
-  
+
   sub vcl_recv
   {
       # Set backend hint for non cachable objects.
       set req.backend_hint = lb.backend();
       set req.backend_hint = lb.backend();
-  
+
       # ...
-  
+
       # Routing logic. Pass a request to an appropriate Varnish node.
       # See https://info.varnish-software.com/blog/creating-self-routing-varnish-cluster for more info.
       unset req.http.x-cache;
@@ -227,8 +228,8 @@ vclTemplate: |
           return(pass);
       }
       set req.backend_hint = lb.backend();
-  
+
       # ...
-  
+
       return(hash);
   }
