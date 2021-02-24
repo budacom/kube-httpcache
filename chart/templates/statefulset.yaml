@@ -99,8 +99,6 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
           - prometheus_varnish_exporter
-          args:
-          - -web.listen-address=0.0.0.0:9193
           volumeMounts:
           - name: vsm
             mountPath: /var/lib/varnish
