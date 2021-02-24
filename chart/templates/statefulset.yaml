@@ -66,14 +66,10 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+          {{- if .Values.lifecycle }}
           lifecycle:
-            preStop:
-              exec:
-                command:
-                - /bin/sh
-                - -c
-                - touch /etc/varnish/fail_probes;
-                  sleep 25
+            {{- toYaml .Values.lifecycle | nindent 12 }}
+          {{- end }}
           volumeMounts:
           - name: template
             mountPath: /etc/varnish/tmpl
@@ -94,6 +90,14 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
+        - name: prometheus-exporter
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: prometheus_varnish_exporter
+          args:
+          - -web.listen-address-0.0.0.0:9193
       volumes:
      {{- if .Values.configmap.enabled }}
       - name: template
@@ -106,7 +110,9 @@ spec:
       {{- if .Values.extraVolumes }}
       {{- toYaml .Values.extraVolumes | nindent 6 }}
       {{- end }}
-      terminationGracePeriodSeconds: 60
+      {{- if .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
