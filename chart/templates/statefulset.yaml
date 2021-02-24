@@ -75,6 +75,8 @@ spec:
             mountPath: /etc/varnish/tmpl
           - name: secret
             mountPath: /etc/varnish/k8s-secret
+          - name: vsm
+            mountPath: /var/lib/varnish
           {{- if .Values.extraMounts }}
             {{- toYaml .Values.extraMounts | nindent 10 }}
           {{- end }}
@@ -95,9 +97,13 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: prometheus_varnish_exporter
+          command:
+          - prometheus_varnish_exporter
           args:
-          - -web.listen-address-0.0.0.0:9193
+          - -web.listen-address=0.0.0.0:9193
+          volumeMounts:
+          - name: vsm
+            mountPath: /var/lib/varnish
       volumes:
      {{- if .Values.configmap.enabled }}
       - name: template
@@ -107,6 +113,9 @@ spec:
       - name: secret
         secret:
           secretName: {{ include "kube-httpcache.fullname" . }}
+      - name: vsm
+        emptyDir:
+          medium: Memory
       {{- if .Values.extraVolumes }}
       {{- toYaml .Values.extraVolumes | nindent 6 }}
       {{- end }}
